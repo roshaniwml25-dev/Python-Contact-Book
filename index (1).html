@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Book</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column, like a pocket address book: header with search, a strip of letter tabs, then entries grouped under their initial. */
+:root {
+  --bg: #edf1f0;
+  --surface: #fbfdfc;
+  --ink: #14201d;
+  --muted: #5a6b67;
+  --line: #d3dcd9;
+  --accent: #0e6b5c;
+  --on-accent: #ffffff;
+  --accent-soft: #d9ece7;
+  --danger: #b3261e;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1614;
+    --surface: #17211e;
+    --ink: #e6efec;
+    --muted: #93a6a1;
+    --line: #29372f;
+    --accent: #4fd1b5;
+    --on-accent: #07211b;
+    --accent-soft: #1b3a33;
+    --danger: #ff8f86;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1614;
+  --surface: #17211e;
+  --ink: #e6efec;
+  --muted: #93a6a1;
+  --line: #29372f;
+  --accent: #4fd1b5;
+  --on-accent: #07211b;
+  --accent-soft: #1b3a33;
+  --danger: #ff8f86;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 100%;
+}
+.wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+header { display: flex; flex-direction: column; gap: 16px; }
+.title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 2rem; letter-spacing: -0.02em; line-height: 1.1; margin: 0; text-wrap: balance; }
+.count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tools { display: flex; gap: 10px; flex-wrap: wrap; }
+.search { flex: 1 1 220px; min-width: 0; }
+
+input[type="text"], input[type="search"], input[type="tel"], input[type="email"] {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+input::placeholder { color: var(--muted); opacity: 0.8; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn {
+  font: inherit; font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn.small { padding: 5px 10px; font-size: 0.85rem; }
+
+.tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.tabs a {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500;
+  min-width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px; color: var(--accent); background: var(--accent-soft); text-decoration: none; flex: 0 0 auto;
+}
+.tabs a:hover { outline: 1px solid var(--accent); }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font: inherit; font-size: 0.85rem; font-weight: 500; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.card.blocked .avatar, .card.blocked .info { opacity: 0.55; }
+.badge.blocked { color: var(--danger); border: 1px solid var(--danger); }
+.note { font-size: 0.85rem; color: var(--muted); border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 0; }
+
+section { display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 16px; }
+section + section { margin-top: 6px; }
+h2 { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent); margin: 0; letter-spacing: 0.12em; display: flex; align-items: center; gap: 10px; }
+h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+}
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--ink);
+}
+.info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.name { font-weight: 600; font-size: 1.02rem; margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; overflow-wrap: anywhere; }
+.badge { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 6px; }
+.line { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); font-size: 0.9rem; }
+.line .val { overflow-wrap: anywhere; user-select: all; }
+.line .mono { font-family: var(--font-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--ink); }
+.copy { font: inherit; font-size: 0.72rem; color: var(--accent); background: none; border: 0; padding: 2px 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.confirm { font-size: 0.88rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+.empty { text-align: center; color: var(--muted); padding: 28px 8px; margin: 0; }
+
+dialog { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 22px; width: min(440px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(5, 12, 10, 0.55); }
+dialog h3 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.err { color: var(--danger); font-size: 0.85rem; min-height: 1.2em; margin: 0 0 8px; }
+.dlg-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 0.9rem;
+  max-width: calc(100vw - 32px); z-index: 20;
+}
+
+@media (max-width: 560px) {
+  h1 { font-size: 1.7rem; }
+  .card { grid-template-columns: auto minmax(0, 1fr); }
+  .actions, .confirm { grid-column: 1 / -1; justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .tabs a { transition: border-color 0.15s, filter 0.15s; }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title-row">
+      <h1>Contact Book</h1>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+    <div class="tools">
+      <div class="search">
+        <input type="search" id="q" placeholder="Search by name, phone or email" aria-label="Search contacts" autocomplete="off">
+      </div>
+      <button class="btn primary" id="add" type="button">New contact</button>
+    </div>
+    <div class="filters" role="group" aria-label="Filter contacts">
+      <button type="button" class="chip" data-f="all" aria-pressed="true">All</button>
+      <button type="button" class="chip" data-f="active" aria-pressed="false">Active</button>
+      <button type="button" class="chip" data-f="blocked" aria-pressed="false">Blocked</button>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Jump to letter"></nav>
+  </header>
+
+  <p class="note" id="note" hidden></p>
+  <main id="list"></main>
+  <p class="count" id="where"></p>
+</div>
+
+<dialog id="dlg">
+  <form id="form" novalidate>
+    <h3 id="dlg-title">New contact</h3>
+    <div class="field">
+      <label for="f-name">Name</label>
+      <input type="text" id="f-name" autocomplete="off" placeholder="Anita Deshmukh">
+    </div>
+    <div class="field">
+      <label for="f-phone">Phone</label>
+      <input type="tel" id="f-phone" autocomplete="off" placeholder="+91 98220 41873">
+    </div>
+    <div class="field">
+      <label for="f-email">Email</label>
+      <input type="email" id="f-email" autocomplete="off" placeholder="anita@example.com">
+    </div>
+    <p class="err" id="err" role="alert"></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn" id="cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="save">Save contact</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  var EXAMPLES = [
+    { id: "ex1", name: "Anita Deshmukh", phone: "+91 98220 41873", email: "anita.deshmukh@example.com" },
+    { id: "ex2", name: "Rohan Kulkarni", phone: "+91 90110 55284", email: "rohan.k@example.com" },
+    { id: "ex3", name: "Meera Iyer", phone: "+91 98765 12034", email: "meera.iyer@example.com" },
+    { id: "ex4", name: "Samuel Okafor", phone: "+44 7700 900123", email: "s.okafor@example.com" }
+  ];
+  var LS_KEY = "contact-book.v1";
+
+  var contacts = [];
+  var loaded = false;
+  var mode = "local";
+  var col = null;
+  var query = "";
+  var filter = "all";
+  var editId = null;
+  var confirmId = null;
+  var slow = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var listEl = $("list"), tabsEl = $("tabs"), countEl = $("count"), noteEl = $("note"),
+      whereEl = $("where"), dlg = $("dlg"), form = $("form"), toastEl = $("toast");
+
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    for (var k in (props || {})) {
+      var v = props[k];
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var kid = arguments[i];
+      if (kid == null) continue;
+      el.append(kid);
+    }
+    return el;
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, 2200);
+  }
+
+  function uid() {
+    try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function isExampleMode() { return loaded && contacts.length === 0; }
+
+  function visible() {
+    var src = isExampleMode() ? EXAMPLES : contacts.slice();
+    var q = query.trim().toLowerCase();
+    var qd = q.replace(/\D/g, "");
+    if (!isExampleMode()) src = src.filter(function (c) { return filter === "all" || (filter === "blocked" ? !!c.blocked : !c.blocked); });
+    src = src.filter(function (c) {
+      if (!q) return true;
+      return (c.name || "").toLowerCase().indexOf(q) > -1 ||
+             (c.email || "").toLowerCase().indexOf(q) > -1 ||
+             (c.phone || "").toLowerCase().indexOf(q) > -1 ||
+             (qd.length > 0 && (c.phone || "").replace(/\D/g, "").indexOf(qd) > -1);
+    });
+    src.sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); });
+    return src;
+  }
+
+  function initialOf(name) {
+    var ch = (name || "").trim().charAt(0).toUpperCase();
+    return /[A-Z]/.test(ch) ? ch : "#";
+  }
+
+  function hueOf(name) {
+    var s = 0;
+    for (var i = 0; i < name.length; i++) s += name.charCodeAt(i) * (i + 3);
+    return s % 360;
+  }
+
+  function copyText(text, label) {
+    var done = function () { toast(label + " copied"); };
+    var fail = function () { toast("Copy isn't available here. Select the text instead."); };
+    try {
+      navigator.clipboard.writeText(text).then(done, fail);
+    } catch (e) { fail(); }
+  }
+
+  function row(value, label, mono) {
+    if (!value) return null;
+    return h("div", { class: "line" },
+      h("span", { class: "val" + (mono ? " mono" : ""), text: value }),
+      h("button", { class: "copy", type: "button", "aria-label": "Copy " + label, onclick: function () { copyText(value, label); } }, "copy")
+    );
+  }
+
+  function card(c, example) {
+    var hue = hueOf(c.name || "");
+    var avatar = h("div", { class: "avatar", "aria-hidden": "true", text: initialOf(c.name) });
+    avatar.style.background = "color-mix(in oklab, hsl(" + hue + " 60% 50%) 26%, var(--surface))";
+
+    var nameEl = h("h3", { class: "name" }, c.name);
+    if (example) nameEl.append(h("span", { class: "badge", text: "Example" }));
+    if (c.blocked) nameEl.append(h("span", { class: "badge blocked", text: "Blocked" }));
+
+    var info = h("div", { class: "info" }, nameEl, row(c.phone, "phone number", true), row(c.email, "email", false));
+
+    var actions = null;
+    if (!example) {
+      if (confirmId === c.id) {
+        actions = h("div", { class: "confirm" },
+          h("span", { text: "Delete this contact?" }),
+          h("button", { class: "btn small danger", type: "button", onclick: function () { removeContact(c.id); } }, "Delete"),
+          h("button", { class: "btn small", type: "button", onclick: function () { confirmId = null; render(); } }, "Keep")
+        );
+      } else {
+        actions = h("div", { class: "actions" },
+          h("button", { class: "btn small", type: "button", "aria-label": (c.blocked ? "Unblock " : "Block ") + c.name, onclick: function () { toggleBlock(c); } }, c.blocked ? "Unblock" : "Block"),
+          h("button", { class: "btn small", type: "button", "aria-label": "Edit " + c.name, onclick: function () { openForm(c.id); } }, "Edit"),
+          h("button", { class: "btn small", type: "button", "aria-label": "Delete " + c.name, onclick: function () { confirmId = c.id; render(); } }, "Delete")
+        );
+      }
+    }
+    return h("article", { class: "card" + (c.blocked ? " blocked" : "") }, avatar, info, actions);
+  }
+
+  function render() {
+    var items = visible();
+    var ex = isExampleMode();
+    document.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.f === filter ? "true" : "false"); });
+    listEl.textContent = "";
+    tabsEl.textContent = "";
+
+    var total = ex ? 0 : contacts.length;
+    countEl.textContent = loaded ? (total === 1 ? "1 contact" : total + " contacts") : "Loading";
+
+    if (ex) {
+      noteEl.hidden = false;
+      noteEl.textContent = "These four are examples. Add your first contact and they go away.";
+    } else if (slow && !loaded) {
+      noteEl.hidden = false;
+      noteEl.textContent = "Your contacts can't be reached yet. Check your connection.";
+    } else {
+      noteEl.hidden = true;
+    }
+
+    if (!loaded) {
+      listEl.append(h("p", { class: "empty", text: "Loading your contacts" }));
+    } else if (items.length === 0) {
+      listEl.append(h("p", { class: "empty", text: query.trim() ? "No contacts match “" + query.trim() + "”." : (filter === "blocked" ? "No blocked contacts." : "No contacts to show.") }));
+    } else {
+      var groups = {};
+      var order = [];
+      items.forEach(function (c) {
+        var k = initialOf(c.name);
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(c);
+      });
+      order.forEach(function (k) {
+        var sec = h("section", { id: "L-" + (k === "#" ? "other" : k) }, h("h2", { text: k }));
+        groups[k].forEach(function (c) { sec.append(card(c, ex)); });
+        listEl.append(sec);
+        tabsEl.append(h("a", { href: "#", text: k, "aria-label": "Jump to " + k, onclick: function (e) {
+          e.preventDefault();
+          sec.scrollIntoView({ behavior: "smooth", block: "start" });
+        } }));
+      });
+    }
+
+    whereEl.textContent = mode === "db" ? "Saved privately to your account." : "Saved in this browser only.";
+  }
+
+  /* storage */
+  function localSave() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(contacts)); } catch (e) {}
+  }
+  function localLoad() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  async function saveContact(data, id) {
+    var rec = { name: data.name, phone: data.phone, email: data.email, updatedAt: Date.now() };
+    if (mode === "db") {
+      if (id) await col.doc(id).update(rec);
+      else { rec.createdAt = Date.now(); await col.doc(uid()).set(rec); }
+    } else {
+      if (id) {
+        contacts = contacts.map(function (c) { return c.id === id ? Object.assign({}, c, rec) : c; });
+      } else {
+        rec.id = uid(); rec.createdAt = Date.now();
+        contacts = contacts.concat([rec]);
+      }
+      localSave();
+      render();
+    }
+  }
+
+  async function removeContact(id) {
+    confirmId = null;
+    try {
+      if (mode === "db") await col.doc(id).delete();
+      else { contacts = contacts.filter(function (c) { return c.id !== id; }); localSave(); render(); }
+      toast("Contact deleted");
+    } catch (e) {
+      toast("Couldn't delete. Try again.");
+      render();
+    }
+  }
+
+  async function toggleBlock(c) {
+    var next = !c.blocked;
+    try {
+      if (mode === "db") await col.doc(c.id).update({ blocked: next, updatedAt: Date.now() });
+      else { contacts = contacts.map(function (x) { return x.id === c.id ? Object.assign({}, x, { blocked: next }) : x; }); localSave(); render(); }
+      toast(next ? "Contact blocked" : "Contact unblocked");
+    } catch (e) { toast("Couldn't update. Try again."); }
+  }
+
+  /* form */
+  function openForm(id) {
+    editId = id || null;
+    var c = id ? contacts.filter(function (x) { return x.id === id; })[0] : null;
+    $("dlg-title").textContent = c ? "Edit contact" : "New contact";
+    $("f-name").value = c ? c.name || "" : "";
+    $("f-phone").value = c ? c.phone || "" : "";
+    $("f-email").value = c ? c.email || "" : "";
+    $("err").textContent = "";
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+    $("f-name").focus();
+  }
+  function closeForm() {
+    if (dlg.close) dlg.close(); else dlg.removeAttribute("open");
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var name = $("f-name").value.trim();
+    var phone = $("f-phone").value.trim();
+    var email = $("f-email").value.trim();
+    var err = $("err");
+    if (!name) { err.textContent = "Enter a name."; $("f-name").focus(); return; }
+    if (phone && phone.replace(/\D/g, "").length < 5) { err.textContent = "That phone number looks too short."; $("f-phone").focus(); return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = "Enter an email like name@example.com."; $("f-email").focus(); return; }
+    $("save").disabled = true;
+    try {
+      var wasEdit = !!editId;
+      await saveContact({ name: name, phone: phone, email: email }, editId);
+      closeForm();
+      toast(wasEdit ? "Contact updated" : "Contact added");
+    } catch (ex) {
+      err.textContent = "Couldn't save. Try again.";
+    }
+    $("save").disabled = false;
+  });
+  $("cancel").addEventListener("click", closeForm);
+  $("add").addEventListener("click", function () { openForm(null); });
+  $("q").addEventListener("input", function (e) { query = e.target.value; render(); });
+  document.querySelectorAll(".chip").forEach(function (b) {
+    b.addEventListener("click", function () { filter = b.dataset.f; render(); });
+  });
+
+  /* startup: render once, then connect storage */
+  render();
+
+  mode = "local";
+  contacts = localLoad();
+  loaded = true;
+  render();
+})();
+</script>
+
+</body>
+</html>
